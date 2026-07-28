@@ -38,7 +38,7 @@ public class TcpTunnel {
                 return;
             }
 
-            while (!Thread.currentThread().isInterrupted() && !stop.get()) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     String clientKey = clientSocket.getInetAddress() + ":" + clientSocket.getPort();
