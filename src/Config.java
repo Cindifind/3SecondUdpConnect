@@ -24,4 +24,8 @@ public class Config {
 
     // ========== 超时参数 ==========
     public static final int IDLE_TIMEOUT_MS = 120_000;           // 隧道建立后空闲超时（2分钟）
+
+    // ========== TCP 转发参数 ==========
+    public static final int LOCAL_TCP_PORT = 9998;               // 本地 TCP 监听端口（HTTP/浏览器用）
+    public static final int TCP_BUFFER_SIZE = 8192;              // TCP 读写缓冲区大小
 }

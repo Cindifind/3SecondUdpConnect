@@ -42,7 +42,8 @@ public class Tunnel {
 
         System.out.println("========================================");
         System.out.println("本地隧道监听已启动!");
-        System.out.println("  本地监听: 0.0.0.0:" + Config.LOCAL_LISTEN_PORT);
+        System.out.println("  UDP 监听: 0.0.0.0:" + Config.LOCAL_LISTEN_PORT);
+        System.out.println("  TCP 监听: 0.0.0.0:" + Config.LOCAL_TCP_PORT + " (TCP→UDP 自动转换)");
         System.out.println("  隧道出口: " + remote);
         System.out.println("  空闲超时: " + (Config.IDLE_TIMEOUT_MS / 1000) + " 秒");
         System.out.println("========================================\n");
@@ -92,6 +93,9 @@ public class Tunnel {
                     System.out.println("[隧道 -> 本地] 收到: " + tunnelPacket.getLength()
                             + " 字节 from " + tunnelPacket.getAddress() + ":" + tunnelPacket.getPort()
                             + " -> " + response);
+
+                    // UDP→TCP 转发：如果有 TCP 客户端连接，回传数据
+                    TcpTunnel.onUdpResponse(tunnelPacket.getData(), tunnelPacket.getLength());
 
                     // 回传给所有已知客户端
                     for (InetSocketAddress client : CLIENT_MAP.values()) {
@@ -168,6 +172,10 @@ public class Tunnel {
         tunnelToLocal.start();
         keepalive.start();
         idleChecker.start();
+
+        // 启动 TCP 监听（TCP→UDP 自动转换）
+        Thread tcpThread = TcpTunnel.start(tunnel, remote, stop);
+        tcpThread.start();
 
         // 主线程等待
         System.out.println("隧道已就绪，等待数据交互...（" + (Config.IDLE_TIMEOUT_MS / 1000) + "秒无消息自动终止）\n");
