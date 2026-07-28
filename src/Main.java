@@ -308,44 +308,54 @@ public class Main {
                             break;
                         }
                     } else if ("ACK".equals(response)) {
-                        // 收到 ACK，回复 ACK_ACK 并建立隧道
-                        System.out.println("[端口 " + port + "] 收到 ACK，回复 ACK_ACK -> " + senderAddr);
-                        DatagramPacket ackAckPacket = new DatagramPacket(
-                                ACK_ACK_PAYLOAD, ACK_ACK_PAYLOAD.length,
-                                senderAddr.getAddress(), senderAddr.getPort());
-                        socket.send(ackAckPacket);
-
-                        // 建立隧道（原子操作，只有一个能成功）
-                        if (TUNNEL_SOCKET.compareAndSet(null, socket)) {
-                            System.out.println("\n>>> [端口 " + port + "] 三次握手完成! 隧道已建立! <<<");
-                            System.out.println("    远端地址: " + senderAddr);
-
-                            TUNNEL_REMOTE.set(senderAddr);
-
-                            System.out.println("    -> 本机发送端口: " + TARGET_HOST + ":" + port);
-                            System.out.println("    -> 远端响应端口: " + senderAddr);
-                            System.out.println("    -> 开始监听本地端口 " + LOCAL_LISTEN_PORT + " 进行转发...\n");
-
-                            STOP.set(true);
+                        // 收到 ACK，如果隧道已建立则不回复
+                        if (STOP.get()) {
+                            System.out.println("[端口 " + port + "] 收到 ACK，但隧道已建立，跳过");
                         } else {
-                            System.out.println("[端口 " + port + "] 三次握手完成，但隧道已由其他端口建立，关闭本端口");
+                            // 回复 ACK_ACK 并建立隧道
+                            System.out.println("[端口 " + port + "] 收到 ACK，回复 ACK_ACK -> " + senderAddr);
+                            DatagramPacket ackAckPacket = new DatagramPacket(
+                                    ACK_ACK_PAYLOAD, ACK_ACK_PAYLOAD.length,
+                                    senderAddr.getAddress(), senderAddr.getPort());
+                            socket.send(ackAckPacket);
+
+                            // 建立隧道（原子操作，只有一个能成功）
+                            if (TUNNEL_SOCKET.compareAndSet(null, socket)) {
+                                System.out.println("\n>>> [端口 " + port + "] 三次握手完成! 隧道已建立! <<<");
+                                System.out.println("    远端地址: " + senderAddr);
+
+                                TUNNEL_REMOTE.set(senderAddr);
+
+                                System.out.println("    -> 本机发送端口: " + TARGET_HOST + ":" + port);
+                                System.out.println("    -> 远端响应端口: " + senderAddr);
+                                System.out.println("    -> 开始监听本地端口 " + LOCAL_LISTEN_PORT + " 进行转发...\n");
+
+                                STOP.set(true);
+                            } else {
+                                System.out.println("[端口 " + port + "] 三次握手完成，但隧道已由其他端口建立，关闭本端口");
+                            }
                         }
                         break;
                     } else if ("ACK_ACK".equals(response)) {
-                        // 收到 ACK_ACK，建立隧道（原子操作，只有一个能成功）
-                        if (TUNNEL_SOCKET.compareAndSet(null, socket)) {
-                            System.out.println("\n>>> [端口 " + port + "] 收到 ACK_ACK! 隧道已建立! <<<");
-                            System.out.println("    远端地址: " + senderAddr);
-
-                            TUNNEL_REMOTE.set(senderAddr);
-
-                            System.out.println("    -> 本机发送端口: " + TARGET_HOST + ":" + port);
-                            System.out.println("    -> 远端响应端口: " + senderAddr);
-                            System.out.println("    -> 开始监听本地端口 " + LOCAL_LISTEN_PORT + " 进行转发...\n");
-
-                            STOP.set(true);
+                        // 收到 ACK_ACK，如果隧道已建立则忽略
+                        if (STOP.get()) {
+                            System.out.println("[端口 " + port + "] 收到 ACK_ACK，但隧道已建立，忽略");
                         } else {
-                            System.out.println("[端口 " + port + "] 收到 ACK_ACK，但隧道已由其他端口建立，关闭本端口");
+                            // 建立隧道（原子操作，只有一个能成功）
+                            if (TUNNEL_SOCKET.compareAndSet(null, socket)) {
+                                System.out.println("\n>>> [端口 " + port + "] 收到 ACK_ACK! 隧道已建立! <<<");
+                                System.out.println("    远端地址: " + senderAddr);
+
+                                TUNNEL_REMOTE.set(senderAddr);
+
+                                System.out.println("    -> 本机发送端口: " + TARGET_HOST + ":" + port);
+                                System.out.println("    -> 远端响应端口: " + senderAddr);
+                                System.out.println("    -> 开始监听本地端口 " + LOCAL_LISTEN_PORT + " 进行转发...\n");
+
+                                STOP.set(true);
+                            } else {
+                                System.out.println("[端口 " + port + "] 收到 ACK_ACK，但隧道已由其他端口建立，关闭本端口");
+                            }
                         }
                         break;
                     } else {
